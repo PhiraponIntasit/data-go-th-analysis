@@ -1,0 +1,736 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>อุบัติเหตุ 7 วันอันตราย</title>
+<meta name="description" content="Interactive dashboard: road accidents during Songkran and New Year on Thailand's national road network, 2019-2026.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root {
+  color-scheme: light;
+  --surface-0: #f4f3ef;
+  --surface-1: #fcfcfb;
+  --border: #e3e2dc;
+  --grid: #ebeae5;
+  --text-primary: #0b0b0b;
+  --text-secondary: #52514e;
+  --text-muted: #7a7974;
+  --all: #52514e;
+  --newyear: #2a78d6;
+  --songkran: #eb6834;
+  --campaign: #1baf7a;
+  --normal: #a3a29c;
+  --shade-newyear: rgba(42, 120, 214, 0.14);
+  --shade-songkran: rgba(235, 104, 52, 0.16);
+  --focus: #2a78d6;
+  --callout: #fff6e5;
+  --callout-border: #eda100;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    color-scheme: dark;
+    --surface-0: #121211;
+    --surface-1: #1a1a19;
+    --border: #33332f;
+    --grid: #2a2a27;
+    --text-primary: #f0efec;
+    --text-secondary: #c3c2b7;
+    --text-muted: #8f8e86;
+    --all: #c3c2b7;
+    --newyear: #3987e5;
+    --songkran: #d95926;
+    --campaign: #199e70;
+    --normal: #6f6e68;
+    --shade-newyear: rgba(57, 135, 229, 0.22);
+    --shade-songkran: rgba(217, 89, 38, 0.24);
+    --focus: #3987e5;
+    --callout: #2a2416;
+    --callout-border: #c98500;
+  }
+}
+:root[data-theme="dark"] {
+  color-scheme: dark;
+  --surface-0: #121211;
+  --surface-1: #1a1a19;
+  --border: #33332f;
+  --grid: #2a2a27;
+  --text-primary: #f0efec;
+  --text-secondary: #c3c2b7;
+  --text-muted: #8f8e86;
+  --all: #c3c2b7;
+  --newyear: #3987e5;
+  --songkran: #d95926;
+  --campaign: #199e70;
+  --normal: #6f6e68;
+  --shade-newyear: rgba(57, 135, 229, 0.22);
+  --shade-songkran: rgba(217, 89, 38, 0.24);
+  --focus: #3987e5;
+  --callout: #2a2416;
+  --callout-border: #c98500;
+}
+* { box-sizing: border-box; }
+html, body { margin: 0; }
+body {
+  background: var(--surface-0);
+  color: var(--text-primary);
+  font: 15px/1.55 "IBM Plex Sans Thai", system-ui, -apple-system, "Segoe UI", sans-serif;
+}
+.wrap { max-width: 1180px; margin: 0 auto; padding: 28px 16px 48px; }
+header h1 { font-size: clamp(22px, 3.2vw, 32px); line-height: 1.25; margin: 0 0 6px; letter-spacing: -0.01em; }
+header p { margin: 0; color: var(--text-secondary); max-width: 760px; }
+.source { font-size: 13px; color: var(--text-muted); margin-top: 6px; }
+.source a { color: inherit; }
+.callout {
+  margin: 20px 0 0; padding: 12px 16px; border-radius: 10px;
+  background: var(--callout); border-left: 4px solid var(--callout-border);
+  color: var(--text-primary); font-size: 14px;
+}
+.filters {
+  position: sticky; top: 0; z-index: 5;
+  display: flex; flex-wrap: wrap; gap: 10px 16px; align-items: center;
+  margin: 20px -16px 0; padding: 12px 16px;
+  background: color-mix(in srgb, var(--surface-0) 92%, transparent);
+  backdrop-filter: blur(6px);
+  border-bottom: 1px solid var(--border);
+}
+.seg { display: inline-flex; border: 1px solid var(--border); border-radius: 8px; overflow: hidden; background: var(--surface-1); flex-wrap: wrap; }
+.seg button {
+  font: inherit; font-size: 13px; padding: 6px 11px; border: 0; background: transparent;
+  color: var(--text-secondary); cursor: pointer; display: inline-flex; align-items: center; gap: 6px;
+}
+.seg button + button { border-left: 1px solid var(--border); }
+.seg button[aria-pressed="true"] { background: var(--text-primary); color: var(--surface-1); }
+.seg .sw { width: 9px; height: 9px; border-radius: 50%; display: inline-block; }
+label.sel { display: inline-flex; align-items: center; gap: 6px; font-size: 13px; color: var(--text-secondary); }
+select {
+  font: inherit; font-size: 13px; padding: 5px 8px; border-radius: 8px;
+  border: 1px solid var(--border); background: var(--surface-1); color: var(--text-primary); max-width: 180px;
+}
+button.reset {
+  font: inherit; font-size: 13px; padding: 5px 10px; border-radius: 8px; cursor: pointer;
+  border: 1px solid var(--border); background: transparent; color: var(--text-secondary);
+}
+button:focus-visible, select:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+header { position: relative; }
+.theme-toggle { float: right; margin: 0 0 8px 16px; }
+.kpis { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 12px; margin-top: 18px; }
+.kpi { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; }
+.kpi .label { font-size: 13px; color: var(--text-secondary); }
+.kpi .value { font-size: 28px; font-weight: 600; letter-spacing: -0.01em; font-variant-numeric: tabular-nums; }
+.kpi .sub { font-size: 12px; color: var(--text-muted); }
+.grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; margin-top: 12px; }
+.card { background: var(--surface-1); border: 1px solid var(--border); border-radius: 12px; padding: 16px; min-width: 0; }
+.card.full { grid-column: 1 / -1; }
+.card h2 { font-size: 16px; margin: 0; line-height: 1.35; }
+.card .desc { font-size: 13px; color: var(--text-secondary); margin: 2px 0 10px; }
+.card-head { display: flex; justify-content: space-between; align-items: flex-start; gap: 12px; flex-wrap: wrap; }
+.legend { display: flex; flex-wrap: wrap; gap: 4px 14px; font-size: 12px; color: var(--text-secondary); margin: 4px 0 6px; }
+.legend span { display: inline-flex; align-items: center; gap: 6px; }
+.legend i { width: 12px; height: 12px; border-radius: 3px; display: inline-block; }
+.legend i.line { height: 2px; border-radius: 1px; }
+.legend i.dash { height: 0; border-top: 2px dashed var(--normal); border-radius: 0; }
+svg { display: block; width: 100%; overflow: visible; }
+svg text { fill: var(--text-secondary); font-size: 11px; font-family: inherit; }
+svg .val { fill: var(--text-primary); }
+.axis line, .axis path { stroke: var(--grid); }
+.hit { fill: transparent; cursor: pointer; }
+.map-wrap { position: relative; }
+canvas { display: block; width: 100%; }
+.tip {
+  position: fixed; pointer-events: none; z-index: 20; opacity: 0; transition: opacity .08s;
+  background: var(--surface-1); color: var(--text-primary); border: 1px solid var(--border);
+  border-radius: 8px; padding: 8px 10px; font-size: 12px; line-height: 1.45;
+  box-shadow: 0 6px 20px rgba(0,0,0,.12); max-width: 260px;
+}
+.tip b { font-weight: 600; }
+.tip .row { display: flex; justify-content: space-between; gap: 14px; }
+.tip .row span:last-child { font-variant-numeric: tabular-nums; }
+.note { font-size: 12px; color: var(--text-muted); margin-top: 8px; }
+footer { margin-top: 28px; font-size: 13px; color: var(--text-secondary); }
+footer h3 { font-size: 14px; margin: 0 0 6px; color: var(--text-primary); }
+footer ul { margin: 0; padding-left: 18px; }
+footer a { color: inherit; }
+@media (max-width: 860px) {
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .kpis { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+  .filters { position: static; }
+}
+@media (max-width: 560px) {
+  .theme-toggle { float: none; margin: 0 0 12px; }
+}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div class="seg theme-toggle" id="theme" role="group" aria-label="ธีม"></div>
+    <h1>"7 วันอันตราย" อันตรายกว่าวันปกติจริงแค่ไหน?</h1>
+    <p>อุบัติเหตุบนถนนของกระทรวงคมนาคม (ทางหลวง ทางหลวงชนบท ทางพิเศษ) แบบรายครั้ง เลือกช่วงเวลา ปี ภาค หรือจังหวัด แล้วทุกกราฟจะเปลี่ยนตาม คลิกแท่งจังหวัดเพื่อดูเฉพาะจังหวัดนั้น</p>
+    <div class="source" id="source"></div>
+  </header>
+
+  <div class="callout"><b>อ่านก่อน:</b> จำนวนอุบัติเหตุที่ <i>บันทึก</i> กระโดดราว 4 เท่าในวันแรกของแคมเปญพอดี แล้วลดกลับในวันหลังแคมเปญจบ (ดูกราฟเส้นด้านล่าง) ส่วนหนึ่งจึงมาจากการเก็บข้อมูลที่เข้มข้นขึ้นช่วงแคมเปญ ตัวชี้วัดที่เทียบข้ามช่วงได้ดีกว่าคือ <b>ผู้เสียชีวิตต่ออุบัติเหตุ 100 ครั้ง</b></div>
+
+  <div class="filters" role="group" aria-label="ตัวกรอง">
+    <div class="seg" id="period" role="group" aria-label="ช่วงเวลา"></div>
+    <label class="sel">ปี <select id="year"></select></label>
+    <label class="sel">ภาค <select id="region"></select></label>
+    <label class="sel">จังหวัด <select id="province"></select></label>
+    <button class="reset" id="reset" type="button">ล้างตัวกรอง</button>
+  </div>
+
+  <section class="kpis" id="kpis" aria-live="polite"></section>
+
+  <div class="grid">
+    <section class="card full">
+      <div class="card-head">
+        <div>
+          <h2>อุบัติเหตุรายวัน: เส้นกระโดดตรงช่วงแคมเปญ</h2>
+          <p class="desc" id="timeline-desc"></p>
+        </div>
+        <div class="seg" id="tl-metric" role="group" aria-label="ตัวชี้วัด"></div>
+      </div>
+      <div class="legend" id="tl-legend"></div>
+      <div id="timeline"></div>
+    </section>
+
+    <section class="card">
+      <h2>เกิดเหตุช่วงไหนของวัน</h2>
+      <p class="desc">สัดส่วนอุบัติเหตุในแต่ละชั่วโมง</p>
+      <div class="legend" id="hour-legend"></div>
+      <div id="hours"></div>
+    </section>
+
+    <section class="card">
+      <h2>ช่วงไหนเกิดแล้วตายง่ายที่สุด</h2>
+      <p class="desc">ผู้เสียชีวิตต่ออุบัติเหตุ 100 ครั้ง ตามชั่วโมง</p>
+      <div class="legend" id="sev-legend"></div>
+      <div id="severity"></div>
+    </section>
+
+    <section class="card">
+      <div class="card-head">
+        <div>
+          <h2>จังหวัด</h2>
+          <p class="desc" id="prov-desc"></p>
+        </div>
+        <div class="seg" id="prov-metric" role="group" aria-label="เรียงตาม"></div>
+      </div>
+      <div id="provinces"></div>
+    </section>
+
+    <section class="card">
+      <h2>จุดเกิดเหตุที่มีผู้เสียชีวิต</h2>
+      <p class="desc" id="map-desc"></p>
+      <div class="map-wrap"><canvas id="map" aria-label="แผนที่จุดเกิดเหตุที่มีผู้เสียชีวิต" role="img"></canvas></div>
+    </section>
+
+    <section class="card">
+      <h2>ประเภทรถคันแรก</h2>
+      <p class="desc">ความยาวแท่ง = สัดส่วนอุบัติเหตุ, ตัวเลขขวา = เสียชีวิตต่อ 100 ครั้ง</p>
+      <div id="vehicles"></div>
+    </section>
+
+    <section class="card">
+      <h2>มูลเหตุสันนิษฐาน</h2>
+      <p class="desc">ความยาวแท่ง = สัดส่วนอุบัติเหตุ, ตัวเลขขวา = เสียชีวิตต่อ 100 ครั้ง</p>
+      <div id="causes"></div>
+    </section>
+  </div>
+
+  <footer>
+    <h3>วิธีทำ</h3>
+    <ul>
+      <li>ข้อมูล: <a href="https://datagov.mot.go.th/dataset/roadaccident">อุบัติเหตุบนโครงข่ายถนนของกระทรวงคมนาคม</a> CSV รายปี ทำความสะอาดแล้ว (วันที่ 3 รูปแบบ, วัน/เดือนสลับ, แถวว่าง, แถวซ้ำ)</li>
+      <li>"ช่วงแคมเปญ" ตรวจจากข้อมูลเอง: วันในฤดูเทศกาลที่มีอุบัติเหตุ ≥ 1.8 เท่าของค่ามัธยฐาน 29 วัน ต่อเนื่องกัน ≥ 4 วัน เพราะวันเริ่มแคมเปญเลื่อนทุกปี</li>
+      <li>ปีที่กรองคือปีปฏิทินของวันเกิดเหตุ แคมเปญปีใหม่จึงคร่อมสองปี · ผู้เสียชีวิตนับ ณ ที่เกิดเหตุ/ตอนรายงาน · ไม่รวมถนนท้องถิ่น</li>
+      <li>โค้ดและรายงานฉบับเต็ม: <a href="https://github.com/PhiraponIntasit/data-go-th-analysis">github.com/PhiraponIntasit/data-go-th-analysis</a></li>
+    </ul>
+  </footer>
+</div>
+<div class="tip" id="tip" role="tooltip"></div>
+
+<script id="data" type="application/json">__DATA__</script>
+<script>
+(() => {
+"use strict";
+const D = JSON.parse(document.getElementById("data").textContent);
+const TH_MONTH = ["ม.ค.", "ก.พ.", "มี.ค.", "เม.ย.", "พ.ค.", "มิ.ย.", "ก.ค.", "ส.ค.", "ก.ย.", "ต.ค.", "พ.ย.", "ธ.ค."];
+const REGION_TH = { North: "เหนือ", Northeast: "ตะวันออกเฉียงเหนือ", Central: "กลาง", East: "ตะวันออก", West: "ตะวันตก", South: "ใต้" };
+const VEHICLE_TH = {
+  "Motorcycle": "รถจักรยานยนต์", "Pickup": "รถปิคอัพ", "Car": "รถเก๋ง/รถยนต์นั่ง", "Truck": "รถบรรทุก",
+  "Bus / van": "รถโดยสาร/รถตู้", "Bicycle / pedestrian": "จักรยาน/คนเดินเท้า", "Other": "อื่นๆ", "Unknown": "ไม่ระบุ",
+};
+const CAUSE_TH = {
+  "Speeding": "ขับรถเร็ว", "Cutting in": "ตัดหน้ากระชั้นชิด", "Drunk driving": "เมาแล้วขับ", "Drowsy / fatigue": "หลับใน/อ่อนเพลีย",
+  "Road / environment": "สภาพถนน/สิ่งแวดล้อม", "Vehicle defect": "รถบกพร่อง/บรรทุกเกิน", "Signal / sign violation": "ฝ่าสัญญาณ/ป้าย",
+  "Unsafe overtaking": "แซงผิดกฎ", "Following too closely": "ขับจี้ท้าย", "Phone / distraction": "ใช้โทรศัพท์",
+  "Other": "อื่นๆ", "Unknown": "ไม่ระบุ",
+};
+// period filter values: "all", "campaign", 0 (New Year), 1 (Songkran), 2 (Normal days)
+const PERIOD_OPTS = [
+  { v: "all", label: "ทุกวัน", color: "--all" },
+  { v: "campaign", label: "ช่วงแคมเปญ", color: "--campaign" },
+  { v: 0, label: "ปีใหม่", color: "--newyear" },
+  { v: 1, label: "สงกรานต์", color: "--songkran" },
+  { v: 2, label: "วันปกติ", color: "--normal" },
+];
+const state = { period: "all", year: -1, region: -1, province: -1, tlMetric: "n", provMetric: "deaths" };
+
+const $ = (id) => document.getElementById(id);
+const css = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+const fmt = (x, d = 0) => Number.isFinite(x) ? x.toLocaleString("th-TH", { minimumFractionDigits: d, maximumFractionDigits: d }) : "–";
+const be = (y) => y + 543;
+const esc = (s) => String(s).replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]));
+const startDate = new Date(D.start + "T00:00:00Z");
+const dayDate = (t) => new Date(startDate.getTime() + t * 86400000);
+const fmtDate = (dt) => `${dt.getUTCDate()} ${TH_MONTH[dt.getUTCMonth()]} ${be(dt.getUTCFullYear())}`;
+const provRegion = D.provinces.map((p) => p[2]);
+
+function periodColor() { return css(PERIOD_OPTS.find((o) => o.v === state.period).color); }
+function periodMatch(p) {
+  if (state.period === "all") return true;
+  if (state.period === "campaign") return p === 0 || p === 1;
+  return p === state.period;
+}
+function placeMatch(v) {
+  if (state.province >= 0) return v === state.province;
+  if (state.region >= 0) return v >= 0 && provRegion[v] === state.region;
+  return true;
+}
+function rowMatch(y, p, v, periodOverride) {
+  if (state.year >= 0 && y !== state.year) return false;
+  if (periodOverride !== undefined ? p !== periodOverride : !periodMatch(p)) return false;
+  return placeMatch(v);
+}
+function placeName() {
+  if (state.province >= 0) return "จ." + D.provinces[state.province][0];
+  if (state.region >= 0) return "ภาค" + REGION_TH[D.regions[state.region]];
+  return "ทุกจังหวัด";
+}
+function periodName() { return PERIOD_OPTS.find((o) => o.v === state.period).label; }
+
+// ---------------------------------------------------------------- tooltip
+const tip = $("tip");
+function showTip(html, ev) {
+  tip.innerHTML = html;
+  tip.style.opacity = 1;
+  const pad = 14, w = tip.offsetWidth, h = tip.offsetHeight;
+  let x = ev.clientX + pad, y = ev.clientY + pad;
+  if (x + w > window.innerWidth - 8) x = ev.clientX - w - pad;
+  if (y + h > window.innerHeight - 8) y = ev.clientY - h - pad;
+  tip.style.left = x + "px"; tip.style.top = y + "px";
+}
+function hideTip() { tip.style.opacity = 0; }
+function row(k, v) { return `<div class="row"><span>${k}</span><span>${v}</span></div>`; }
+
+// ---------------------------------------------------------------- filters
+function buildFilters() {
+  $("period").innerHTML = PERIOD_OPTS.map((o, i) =>
+    `<button type="button" data-i="${i}"><span class="sw" style="background:var(${o.color})"></span>${o.label}</button>`).join("");
+  $("period").addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    state.period = PERIOD_OPTS[+b.dataset.i].v; render();
+  });
+  $("year").innerHTML = `<option value="-1">ทั้งหมด</option>` +
+    D.years.map((y, i) => `<option value="${i}">${be(y)}</option>`).join("");
+  $("region").innerHTML = `<option value="-1">ทั้งหมด</option>` +
+    D.regions.map((r, i) => `<option value="${i}">${REGION_TH[r]}</option>`).join("");
+  $("year").addEventListener("change", (e) => { state.year = +e.target.value; render(); });
+  $("region").addEventListener("change", (e) => { state.region = +e.target.value; state.province = -1; render(); });
+  $("province").addEventListener("change", (e) => {
+    state.province = +e.target.value;
+    if (state.province >= 0) state.region = provRegion[state.province];
+    render();
+  });
+  $("reset").addEventListener("click", () => {
+    Object.assign(state, { period: "all", year: -1, region: -1, province: -1 }); render();
+  });
+  segment("tl-metric", [["n", "อุบัติเหตุ"], ["deaths", "ผู้เสียชีวิต"]], "tlMetric");
+  segment("prov-metric", [["deaths", "ผู้เสียชีวิต"], ["sev", "ต่อ 100 ครั้ง"]], "provMetric");
+  const themes = [["auto", "อัตโนมัติ"], ["light", "สว่าง"], ["dark", "มืด"]];
+  let theme = "auto";
+  try { theme = localStorage.getItem("theme") || "auto"; } catch (e) { /* storage unavailable */ }
+  const applyTheme = (t) => {
+    theme = t;
+    if (t === "auto") document.documentElement.removeAttribute("data-theme");
+    else document.documentElement.setAttribute("data-theme", t);
+    try { localStorage.setItem("theme", t); } catch (e) { /* ignore */ }
+    $("theme").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === t));
+    render();
+  };
+  $("theme").innerHTML = themes.map(([v, l]) => `<button type="button" data-v="${v}">${l}</button>`).join("");
+  $("theme").addEventListener("click", (e) => { const b = e.target.closest("button"); if (b) applyTheme(b.dataset.v); });
+  if (theme !== "auto") document.documentElement.setAttribute("data-theme", theme);
+  $("theme").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === theme));
+  window.matchMedia("(prefers-color-scheme: dark)").addEventListener("change", render);
+}
+function segment(id, opts, key) {
+  $(id).innerHTML = opts.map(([v, l]) => `<button type="button" data-v="${v}">${l}</button>`).join("");
+  $(id).addEventListener("click", (e) => {
+    const b = e.target.closest("button"); if (!b) return;
+    state[key] = b.dataset.v; render();
+  });
+}
+function syncFilters() {
+  $("period").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", PERIOD_OPTS[+b.dataset.i].v === state.period));
+  $("year").value = state.year;
+  $("region").value = state.region;
+  const provs = D.provinces.map((p, i) => [p, i]).filter(([p]) => state.region < 0 || p[2] === state.region)
+    .sort((a, b) => a[0][0].localeCompare(b[0][0], "th"));
+  $("province").innerHTML = `<option value="-1">ทั้งหมด</option>` +
+    provs.map(([p, i]) => `<option value="${i}">${p[0]}</option>`).join("");
+  $("province").value = state.province;
+  $("tl-metric").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === state.tlMetric));
+  $("prov-metric").querySelectorAll("button").forEach((b) => b.setAttribute("aria-pressed", b.dataset.v === state.provMetric));
+}
+
+// ---------------------------------------------------------------- aggregation
+function daysInSelection(periodOverride) {
+  let n = 0;
+  for (const [y, p, c] of D.dayCount) {
+    if (state.year >= 0 && y !== state.year) continue;
+    if (periodOverride !== undefined ? p !== periodOverride : !periodMatch(p)) continue;
+    n += c;
+  }
+  return n;
+}
+function hourAgg(periodOverride) {
+  const n = new Array(24).fill(0), d = new Array(24).fill(0);
+  let total = 0, deaths = 0;
+  for (const [y, p, v, h, c, k] of D.hourCube) {
+    if (!rowMatch(y, p, v, periodOverride)) continue;
+    total += c; deaths += k;
+    if (h >= 0) { n[h] += c; d[h] += k; }
+  }
+  return { n, d, total, deaths };
+}
+function catAgg(index, labels) {
+  const n = new Array(labels.length).fill(0), d = new Array(labels.length).fill(0);
+  for (const r of D.catCube) {
+    if (!rowMatch(r[0], r[1], r[2])) continue;
+    n[r[index]] += r[5]; d[r[index]] += r[6];
+  }
+  return labels.map((l, i) => ({ label: l, n: n[i], d: d[i] }));
+}
+function provAgg() {
+  const n = new Array(D.provinces.length).fill(0), d = new Array(D.provinces.length).fill(0);
+  for (const [y, p, v, , c, k] of D.hourCube) {
+    if (v < 0) continue;
+    if (state.year >= 0 && y !== state.year) continue;
+    if (!periodMatch(p)) continue;
+    if (state.region >= 0 && provRegion[v] !== state.region) continue;
+    n[v] += c; d[v] += k;
+  }
+  return D.provinces.map((p, i) => ({ i, th: p[0], en: p[1], n: n[i], d: d[i], sev: n[i] ? 100 * d[i] / n[i] : NaN }));
+}
+
+// ---------------------------------------------------------------- KPIs
+function renderKpis(h) {
+  const days = daysInSelection();
+  const sev = h.total ? 100 * h.deaths / h.total : NaN;
+  const all = (() => { const s = state.period; state.period = "all"; const a = hourAgg(); state.period = s; return a; })();
+  const sevAll = all.total ? 100 * all.deaths / all.total : NaN;
+  const cards = [
+    ["อุบัติเหตุที่บันทึก", fmt(h.total), `${fmt(days)} วัน · ${fmt(days ? h.total / days : NaN, 1)} ครั้ง/วัน`],
+    ["ผู้เสียชีวิต", fmt(h.deaths), `${periodName()} · ${placeName()}`],
+    ["ผู้เสียชีวิตต่อวัน", fmt(days ? h.deaths / days : NaN, 1), "หารด้วยจำนวนวันในปฏิทิน"],
+    ["เสียชีวิตต่ออุบัติเหตุ 100 ครั้ง", fmt(sev, 1), state.period === "all" ? "ตัวชี้วัดที่เทียบข้ามช่วงได้" : `ทุกวันในพื้นที่เดียวกัน: ${fmt(sevAll, 1)}`],
+  ];
+  $("kpis").innerHTML = cards.map(([l, v, s]) =>
+    `<div class="kpi"><div class="label">${l}</div><div class="value">${v}</div><div class="sub">${esc(s)}</div></div>`).join("");
+}
+
+// ---------------------------------------------------------------- charts
+function width(el) { return Math.max(280, el.clientWidth); }
+
+function renderTimeline() {
+  const el = $("timeline");
+  const W = width(el), H = W < 600 ? 210 : 260, m = { t: 8, r: 10, b: 26, l: 40 };
+  const region = state.province >= 0 ? provRegion[state.province] : state.region;
+  const total = Math.round((Date.parse(D.end) - Date.parse(D.start)) / 86400000) + 1;
+  const vals = new Float64Array(total), deaths = new Float64Array(total), counts = new Float64Array(total);
+  for (const [t, r, n, k] of D.daily) {
+    if (region >= 0 && r !== region) continue;
+    counts[t] += n; deaths[t] += k;
+  }
+  const metric = state.tlMetric === "deaths" ? deaths : counts;
+  for (let i = 0; i < total; i++) vals[i] = metric[i];
+  let t0 = 0, t1 = total - 1;
+  if (state.year >= 0) {
+    const y = D.years[state.year];
+    t0 = Math.max(0, Math.round((Date.UTC(y, 0, 1) - startDate) / 86400000));
+    t1 = Math.min(total - 1, Math.round((Date.UTC(y, 11, 31) - startDate) / 86400000));
+  }
+  let ymax = 1;
+  for (let i = t0; i <= t1; i++) ymax = Math.max(ymax, vals[i]);
+  ymax = niceMax(ymax);
+  const x = (t) => m.l + (t - t0) / Math.max(1, t1 - t0) * (W - m.l - m.r);
+  const y = (v) => H - m.b - v / ymax * (H - m.t - m.b);
+  const campaign = new Map(D.campaignDays.map(([t, p]) => [t, p]));
+  const bw = Math.max(1, (W - m.l - m.r) / Math.max(1, t1 - t0));
+  let shades = "";
+  for (const [t, p] of D.campaignDays) {
+    if (t < t0 || t > t1) continue;
+    shades += `<rect x="${x(t) - bw / 2}" y="${m.t}" width="${bw}" height="${H - m.t - m.b}" fill="var(${p === 0 ? "--shade-newyear" : "--shade-songkran"})"/>`;
+  }
+  let path = "";
+  for (let i = t0; i <= t1; i++) path += (i === t0 ? "M" : "L") + x(i).toFixed(1) + "," + y(vals[i]).toFixed(1);
+  const ticks = yTicks(ymax);
+  let axis = ticks.map((v) => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>
+    <text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v)}</text>`).join("");
+  // x ticks: years, or months when zoomed into one year
+  const xt = [];
+  if (state.year >= 0) {
+    const yy = D.years[state.year];
+    for (let mo = 0; mo < 12; mo++) {
+      const t = Math.round((Date.UTC(yy, mo, 1) - startDate) / 86400000);
+      if (t >= t0 && t <= t1) xt.push([t, TH_MONTH[mo]]);
+    }
+  } else {
+    for (const yy of D.years) {
+      const t = Math.round((Date.UTC(yy, 0, 1) - startDate) / 86400000);
+      if (t >= t0 && t <= t1) xt.push([t, String(be(yy))]);
+    }
+  }
+  axis += xt.map(([t, l]) => `<text x="${x(t)}" y="${H - 8}" text-anchor="${W < 500 && l.length > 4 ? "middle" : "start"}">${l}</text>`).join("");
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="อุบัติเหตุรายวัน">${shades}${axis}
+    <path d="${path}" fill="none" stroke="var(--all)" stroke-width="${t1 - t0 > 900 ? 1 : 1.6}" stroke-linejoin="round"/>
+    <line id="tl-cross" x1="0" x2="0" y1="${m.t}" y2="${H - m.b}" stroke="var(--text-muted)" stroke-width="1" visibility="hidden"/>
+    <circle id="tl-dot" r="4" fill="var(--all)" stroke="var(--surface-1)" stroke-width="2" visibility="hidden"/>
+    <rect class="hit" x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}"/></svg>`;
+  const svg = el.querySelector("svg"), cross = svg.querySelector("#tl-cross"), dot = svg.querySelector("#tl-dot");
+  svg.querySelector(".hit").addEventListener("mousemove", (ev) => {
+    const r = svg.getBoundingClientRect();
+    const px = (ev.clientX - r.left) * W / r.width;
+    const t = Math.min(t1, Math.max(t0, Math.round(t0 + (px - m.l) / (W - m.l - m.r) * (t1 - t0))));
+    cross.setAttribute("x1", x(t)); cross.setAttribute("x2", x(t)); cross.setAttribute("visibility", "visible");
+    dot.setAttribute("cx", x(t)); dot.setAttribute("cy", y(vals[t])); dot.setAttribute("visibility", "visible");
+    const p = campaign.get(t);
+    showTip(`<b>${fmtDate(dayDate(t))}</b>${p !== undefined ? ` · แคมเปญ${p === 0 ? "ปีใหม่" : "สงกรานต์"}` : ""}` +
+      row("อุบัติเหตุ", fmt(counts[t])) + row("ผู้เสียชีวิต", fmt(deaths[t])), ev);
+  });
+  svg.querySelector(".hit").addEventListener("mouseleave", () => {
+    hideTip(); cross.setAttribute("visibility", "hidden"); dot.setAttribute("visibility", "hidden");
+  });
+  const where = region >= 0 ? "ภาค" + REGION_TH[D.regions[region]] + (state.province >= 0 ? " (ภาคของจังหวัดที่เลือก)" : "") : "ทั้งประเทศ";
+  $("timeline-desc").textContent = `${state.tlMetric === "deaths" ? "ผู้เสียชีวิต" : "อุบัติเหตุ"}ต่อวัน · ${where}${state.year >= 0 ? " · ปี " + be(D.years[state.year]) : ""} · แถบสีคือวันแคมเปญที่ตรวจจากข้อมูล`;
+  $("tl-legend").innerHTML = `<span><i style="background:var(--shade-newyear)"></i>แคมเปญปีใหม่</span><span><i style="background:var(--shade-songkran)"></i>แคมเปญสงกรานต์</span>`;
+}
+
+function niceMax(v) {
+  const p = Math.pow(10, Math.floor(Math.log10(v)));
+  for (const s of [1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10]) if (s * p >= v) return s * p;
+  return 10 * p;
+}
+function yTicks(max) {
+  const step = niceStep(max / 4);
+  const out = [];
+  for (let v = 0; v <= max + 1e-9; v += step) out.push(+v.toFixed(6));
+  return out;
+}
+function niceStep(raw) {
+  const p = Math.pow(10, Math.floor(Math.log10(raw || 1)));
+  for (const s of [1, 2, 2.5, 5, 10]) if (s * p >= raw) return s * p;
+  return 10 * p;
+}
+
+function lineChart(el, series, opts) {
+  const W = width(el), H = 220, m = { t: 10, r: 12, b: 26, l: 40 };
+  let ymax = 0;
+  for (const s of series) for (const v of s.values) if (Number.isFinite(v)) ymax = Math.max(ymax, v);
+  ymax = niceMax(ymax || 1);
+  const x = (h) => m.l + h / 23 * (W - m.l - m.r);
+  const y = (v) => H - m.b - v / ymax * (H - m.t - m.b);
+  let svg = yTicks(ymax).map((v) => `<line x1="${m.l}" x2="${W - m.r}" y1="${y(v)}" y2="${y(v)}" stroke="var(--grid)"/>
+    <text x="${m.l - 6}" y="${y(v) + 4}" text-anchor="end">${fmt(v, opts.tickDigits || 0)}${opts.unit || ""}</text>`).join("");
+  svg += (W < 480 ? [0, 6, 12, 18] : [0, 3, 6, 9, 12, 15, 18, 21]).map((h) => `<text x="${x(h)}" y="${H - 8}" text-anchor="middle">${String(h).padStart(2, "0")}:00</text>`).join("");
+  for (const s of series) {
+    let d = "", pen = false;
+    s.values.forEach((v, h) => {
+      if (!Number.isFinite(v)) { pen = false; return; }
+      d += (pen ? "L" : "M") + x(h).toFixed(1) + "," + y(v).toFixed(1); pen = true;
+    });
+    svg += `<path d="${d}" fill="none" stroke="${s.color}" stroke-width="2" ${s.dash ? 'stroke-dasharray="5 4"' : ""} stroke-linejoin="round"/>`;
+  }
+  svg += `<line class="cross" y1="${m.t}" y2="${H - m.b}" stroke="var(--text-muted)" visibility="hidden"/>`;
+  svg += `<rect class="hit" x="${m.l}" y="${m.t}" width="${W - m.l - m.r}" height="${H - m.t - m.b}"/>`;
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(opts.label)}">${svg}</svg>`;
+  const s = el.querySelector("svg"), cross = s.querySelector(".cross");
+  s.querySelector(".hit").addEventListener("mousemove", (ev) => {
+    const r = s.getBoundingClientRect();
+    const h = Math.min(23, Math.max(0, Math.round(((ev.clientX - r.left) * W / r.width - m.l) / (W - m.l - m.r) * 23)));
+    cross.setAttribute("x1", x(h)); cross.setAttribute("x2", x(h)); cross.setAttribute("visibility", "visible");
+    showTip(`<b>${String(h).padStart(2, "0")}:00–${String(h).padStart(2, "0")}:59</b>` +
+      series.map((se) => row(se.name, fmt(se.values[h], opts.digits) + (opts.unit || "") + (se.extra ? se.extra(h) : ""))).join(""), ev);
+  });
+  s.querySelector(".hit").addEventListener("mouseleave", () => { hideTip(); cross.setAttribute("visibility", "hidden"); });
+}
+
+function renderHours(h) {
+  const color = periodColor();
+  const ref = state.period === 2 ? null : hourAgg(2);
+  const share = (a) => { const t = a.n.reduce((x, y) => x + y, 0); return a.n.map((v) => t ? 100 * v / t : NaN); };
+  const sev = (a) => a.n.map((v, i) => v >= 20 ? 100 * a.d[i] / v : NaN);
+  const series = [{ name: periodName(), values: share(h), color, extra: (i) => ` (${fmt(h.n[i])} ครั้ง)` }];
+  const sevSeries = [{ name: periodName(), values: sev(h), color, extra: (i) => ` (${fmt(h.n[i])} ครั้ง)` }];
+  if (ref && state.period !== "all") {
+    series.push({ name: "วันปกติ", values: share(ref), color: "var(--normal)", dash: true });
+    sevSeries.push({ name: "วันปกติ", values: sev(ref), color: "var(--normal)", dash: true });
+  }
+  const legend = series.map((s) => `<span><i class="${s.dash ? "line dash" : "line"}" style="${s.dash ? "" : "background:" + s.color}"></i>${s.name}</span>`).join("");
+  $("hour-legend").innerHTML = legend;
+  $("sev-legend").innerHTML = legend + `<span style="color:var(--text-muted)">(แสดงเฉพาะชั่วโมงที่มี ≥ 20 ครั้ง)</span>`;
+  lineChart($("hours"), series, { label: "สัดส่วนอุบัติเหตุตามชั่วโมง", unit: "%", digits: 1 });
+  lineChart($("severity"), sevSeries, { label: "ผู้เสียชีวิตต่อ 100 ครั้งตามชั่วโมง", digits: 1 });
+}
+
+function hbars(el, items, opts) {
+  const W = width(el), rowH = 24, labelW = Math.min(opts.labelW || 150, W * 0.42), valW = 56;
+  const H = items.length * rowH + 4;
+  const max = Math.max(...items.map((d) => d.value), 1e-9);
+  const x = (v) => v / max * (W - labelW - valW - 8);
+  let svg = "";
+  items.forEach((d, i) => {
+    const yy = i * rowH + 3, bh = rowH - 8;
+    const w = Math.max(d.value > 0 ? 2 : 0, x(d.value));
+    const dim = opts.selected !== undefined && opts.selected >= 0 && d.key !== opts.selected;
+    svg += `<text x="${labelW - 8}" y="${yy + bh / 2 + 4}" text-anchor="end" ${d.key === opts.selected ? 'class="val" font-weight="600"' : ""}>${esc(d.label)}</text>`;
+    svg += `<path d="${roundedBar(labelW, yy, w, bh)}" fill="${opts.color}" opacity="${dim ? 0.35 : 1}"/>`;
+    svg += `<text class="val" x="${labelW + w + 6}" y="${yy + bh / 2 + 4}">${d.text}</text>`;
+    svg += `<rect class="hit" data-i="${i}" x="0" y="${i * rowH}" width="${W}" height="${rowH}"/>`;
+  });
+  el.innerHTML = `<svg viewBox="0 0 ${W} ${H}" height="${H}" role="img" aria-label="${esc(opts.label)}">${svg}</svg>`;
+  el.querySelectorAll(".hit").forEach((r) => {
+    const d = items[+r.dataset.i];
+    r.addEventListener("mousemove", (ev) => showTip(opts.tip(d), ev));
+    r.addEventListener("mouseleave", hideTip);
+    if (opts.onClick) r.addEventListener("click", () => { hideTip(); opts.onClick(d); });
+    else r.style.cursor = "default";
+  });
+}
+function roundedBar(x, y, w, h) {
+  const r = Math.min(4, w / 2, h / 2);
+  if (w <= 0) return "";
+  return `M${x},${y}H${x + w - r}Q${x + w},${y} ${x + w},${y + r}V${y + h - r}Q${x + w},${y + h} ${x + w - r},${y + h}H${x}Z`;
+}
+
+function renderProvinces() {
+  const rows = provAgg().filter((p) => p.n > 0);
+  const minN = 30;
+  let items;
+  if (state.provMetric === "sev") {
+    items = rows.filter((p) => p.n >= minN).sort((a, b) => b.sev - a.sev);
+    $("prov-desc").textContent = `เสียชีวิตต่ออุบัติเหตุ 100 ครั้ง · ${periodName()} · เฉพาะจังหวัดที่มี ≥ ${minN} ครั้ง · คลิกเพื่อกรอง`;
+  } else {
+    items = rows.sort((a, b) => b.d - a.d);
+    $("prov-desc").textContent = `ผู้เสียชีวิตรวม · ${periodName()} · คลิกเพื่อกรอง`;
+  }
+  const top = items.slice(0, 15);
+  if (state.province >= 0 && !top.some((p) => p.i === state.province)) {
+    const sel = items.find((p) => p.i === state.province);
+    if (sel) top.push(sel);
+  }
+  const color = periodColor();
+  hbars($("provinces"), top.map((p) => ({
+    key: p.i, label: p.th, value: state.provMetric === "sev" ? p.sev : p.d,
+    text: state.provMetric === "sev" ? fmt(p.sev, 1) : fmt(p.d), p,
+  })), {
+    color, selected: state.province, label: "อันดับจังหวัด", labelW: 130,
+    tip: (d) => `<b>${esc(d.p.th)}</b> (${esc(d.p.en)})` + row("อุบัติเหตุ", fmt(d.p.n)) + row("ผู้เสียชีวิต", fmt(d.p.d)) + row("ต่อ 100 ครั้ง", fmt(d.p.sev, 1)),
+    onClick: (d) => {
+      state.province = state.province === d.key ? -1 : d.key;
+      if (state.province >= 0) state.region = provRegion[state.province];
+      render();
+    },
+  });
+  if (!top.length) $("provinces").innerHTML = `<p class="note">ไม่มีข้อมูลในตัวกรองนี้</p>`;
+}
+
+function renderCategory(elId, index, labels, dict) {
+  const agg = catAgg(index, labels);
+  const total = agg.reduce((s, a) => s + a.n, 0);
+  const items = agg.filter((a) => a.n > 0 && a.label !== "Unknown").sort((a, b) => b.n - a.n).map((a) => ({
+    key: a.label, label: dict[a.label] || a.label, value: total ? 100 * a.n / total : 0,
+    text: `${fmt(total ? 100 * a.n / total : 0, 1)}% · ${a.n >= 20 ? fmt(100 * a.d / a.n, 1) : "–"}`, a,
+  }));
+  hbars($(elId), items, {
+    color: periodColor(), label: elId, labelW: 160,
+    tip: (d) => `<b>${esc(d.label)}</b>` + row("อุบัติเหตุ", fmt(d.a.n)) + row("สัดส่วน", fmt(d.value, 1) + "%") +
+      row("ผู้เสียชีวิต", fmt(d.a.d)) + row("ต่อ 100 ครั้ง", d.a.n ? fmt(100 * d.a.d / d.a.n, 1) : "–"),
+  });
+  if (!items.length) $(elId).innerHTML = `<p class="note">ไม่มีข้อมูลในตัวกรองนี้</p>`;
+}
+
+// ---------------------------------------------------------------- map
+let mapPts = [], mapProj = null;
+function renderMap() {
+  const cv = $("map");
+  const W = width(cv.parentElement);
+  const lat0 = 5.5, lat1 = 20.6, lon0 = 97.3, lon1 = 105.7;
+  const k = Math.cos(13 * Math.PI / 180);
+  const H = Math.round(W * (lat1 - lat0) / ((lon1 - lon0) * k));
+  const Hc = Math.min(H, 560), scale = Hc / (lat1 - lat0), Wd = (lon1 - lon0) * k * scale, ox = (W - Wd) / 2;
+  const dpr = window.devicePixelRatio || 1;
+  cv.width = W * dpr; cv.height = Hc * dpr; cv.style.height = Hc + "px";
+  const ctx = cv.getContext("2d");
+  ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  ctx.clearRect(0, 0, W, Hc);
+  const px = (lon) => ox + (lon - lon0) * k * scale, py = (lat) => (lat1 - lat) * scale;
+  mapProj = { px, py };
+  ctx.fillStyle = css("--grid");
+  for (const r of D.points) ctx.fillRect(px(r[1] / 1000) - 1, py(r[0] / 1000) - 1, 2, 2);
+  const sel = D.points.filter((r) => rowMatch(r[2], r[3], r[4]));
+  ctx.fillStyle = periodColor();
+  ctx.globalAlpha = sel.length > 5000 ? 0.35 : sel.length > 1500 ? 0.55 : 0.8;
+  mapPts = [];
+  let n = 0, deaths = 0;
+  for (const r of sel) {
+    const x = px(r[1] / 1000), y = py(r[0] / 1000), s = (sel.length > 5000 ? 2.5 : 3.5) + (r[5] > 1 ? 1 : 0);
+    ctx.beginPath(); ctx.arc(x, y, s / 2 + 0.5, 0, Math.PI * 2); ctx.fill();
+    mapPts.push([x, y, r]); n++; deaths += r[5];
+  }
+  ctx.globalAlpha = 1;
+  $("map-desc").textContent = `${fmt(n)} จุดที่มีผู้เสียชีวิต (${fmt(deaths)} ราย) · ${periodName()} · ${placeName()}${state.year >= 0 ? " · ปี " + be(D.years[state.year]) : ""} · จุดสีเทา = ทั้งหมด`;
+}
+function mapHover(ev) {
+  const cv = $("map"), r = cv.getBoundingClientRect();
+  const mx = ev.clientX - r.left, my = ev.clientY - r.top;
+  let best = null, bd = 64;
+  for (const p of mapPts) {
+    const dx = p[0] - mx, dy = p[1] - my, d = dx * dx + dy * dy;
+    if (d < bd) { bd = d; best = p; }
+  }
+  if (!best) return hideTip();
+  const [, , rr] = best;
+  showTip(`<b>จ.${esc(D.provinces[rr[4]] ? D.provinces[rr[4]][0] : "ไม่ระบุ")}</b>` +
+    row("ช่วง", ["แคมเปญปีใหม่", "แคมเปญสงกรานต์", "วันปกติ"][rr[3]]) + row("ปี", be(D.years[rr[2]])) + row("ผู้เสียชีวิต", rr[5]), ev);
+}
+
+// ---------------------------------------------------------------- render
+function render() {
+  syncFilters();
+  const h = hourAgg();
+  renderKpis(h);
+  renderTimeline();
+  renderHours(h);
+  renderProvinces();
+  renderMap();
+  renderCategory("vehicles", 3, D.vehicles, VEHICLE_TH);
+  renderCategory("causes", 4, D.causes, CAUSE_TH);
+}
+
+$("source").innerHTML = `ข้อมูล: กระทรวงคมนาคม (datagov.mot.go.th) · ${fmtDate(new Date(D.start + "T00:00:00Z"))} – ${fmtDate(new Date(D.end + "T00:00:00Z"))}`;
+buildFilters();
+$("map").addEventListener("mousemove", mapHover);
+$("map").addEventListener("mouseleave", hideTip);
+let rt;
+window.addEventListener("resize", () => { clearTimeout(rt); rt = setTimeout(render, 120); });
+render();
+})();
+</script>
+</body>
+</html>

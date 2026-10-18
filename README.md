@@ -3,6 +3,8 @@
 
 วิเคราะห์ข้อมูลเปิดภาครัฐ **อุบัติเหตุบนโครงข่ายถนนของกระทรวงคมนาคม** ซึ่งเป็นข้อมูลรายครั้ง 168,300 ครั้ง ช่วง ม.ค. 2562 – ต.ค. 2569 เพื่อตอบคำถามว่าช่วงเทศกาลอันตรายกว่าวันปกติแค่ไหน, เกิดเหตุที่ไหน ช่วงเวลาไหน เพราะอะไร แล้วแปลงคำตอบเป็นข้อเสนอแนะเชิงนโยบาย
 
+📊 **Interactive dashboard: [phiraponintasit.github.io/data-go-th-analysis](https://phiraponintasit.github.io/data-go-th-analysis/)** กรองตามช่วงเทศกาล ปี ภาค จังหวัด แล้วทุกกราฟเปลี่ยนตาม
+
 📄 **รายงานฉบับเต็ม: [`reports/REPORT.md`](reports/REPORT.md)** (กราฟ 10 รูป, ตาราง, cleaning log, ข้อจำกัด)
 
 ![Recorded accidents jump the day a campaign starts](reports/figures/01_recording_step.png)
@@ -83,7 +85,8 @@ pip install -r requirements.txt
 
 python -m roadsafety.download      # ดาวน์โหลด CSV 8 ไฟล์ (~86 MB) ลง data/raw/
 python -m roadsafety.report        # ทำความสะอาด + วิเคราะห์ + เขียน reports/REPORT.md (~20 วินาที)
-pytest                             # 48 tests
+python -m roadsafety.dashboard     # สร้าง docs/index.html (dashboard ไฟล์เดียว เปิดในเบราว์เซอร์ได้เลย)
+pytest                             # 49 tests
 ```
 
 - `notebooks/walkthrough.ipynb`: เดินผ่านทุกขั้นแบบ interactive (สำรวจข้อมูลดิบ → cleaning → วิเคราะห์)
@@ -99,10 +102,12 @@ roadsafety/
   analysis.py    ตารางสรุปทั้งหมดที่ใช้ในรายงาน
   charts.py      กราฟ matplotlib
   report.py      รันทั้ง pipeline แล้วเขียน REPORT.md (ทุกตัวเลขคำนวณจากข้อมูล)
+  dashboard.py   รวมข้อมูลเป็นตารางย่อแล้วฝังใน docs/index.html (HTML + SVG + JavaScript ล้วน ไม่มี library)
   download.py    ค้นหา/ดาวน์โหลดผ่าน CKAN API
 tests/           กฎการทำความสะอาด (รวมเคสจากข้อมูลจริง), นิยามเทศกาล, การคำนวณอัตรา, end-to-end
 notebooks/       walkthrough.ipynb
 reports/         REPORT.md, figures/, cleaning_log.csv
+docs/            index.html: interactive dashboard (GitHub Pages)
 ```
 
 ## ข้อจำกัด

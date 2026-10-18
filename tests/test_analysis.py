@@ -99,3 +99,16 @@ def test_end_to_end_report(tmp_path):
     text = report.read_text(encoding="utf-8")
     assert "## 5. Policy recommendations" in text
     assert len(list((tmp_path / "out" / "figures").glob("*.png"))) == 10
+
+
+def test_dashboard_payload_and_page(tmp_path):
+    import json
+
+    from roadsafety.dashboard import build_payload
+    df = _tiny()
+    payload = build_payload(df)
+    assert sum(r[4] for r in payload["hourCube"]) == len(df)
+    assert sum(r[5] for r in payload["catCube"]) == len(df)
+    assert sum(r[2] for r in payload["dayCount"]) == (df["date"].max() - df["date"].min()).days + 1
+    assert len(payload["campaignDays"]) == 14
+    json.dumps(payload)  # must be serialisable as-is
