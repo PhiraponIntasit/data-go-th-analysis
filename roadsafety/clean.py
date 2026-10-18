@@ -22,9 +22,11 @@ from .provinces import PROVINCE_TABLE, normalize_province
 # Canonical column -> header spellings seen across years (compared after _norm_header).
 COLUMN_ALIASES: dict[str, list[str]] = {
     "acc_code": ["acc_code", "acccode", "รหัสอุบัติเหตุ"],
+    "year_recorded": ["ปีที่เกิดเหตุ", "year"],
     "incident_datetime": ["incident_datetime", "วันที่และเวลาที่เกิดเหตุ"],
     "incident_date": ["วันที่เกิดเหตุ", "incident_date", "date"],
     "incident_time": ["เวลา", "เวลาที่เกิดเหตุ", "incident_time", "time"],
+    "report_date": ["วันที่รายงาน", "report_date"],
     "province": ["จังหวัด", "province_th", "province", "province_en"],
     "agency": ["หน่วยงาน", "agency"],
     "route": ["สายทาง", "route", "ชื่อสายทาง"],
@@ -35,11 +37,11 @@ COLUMN_ALIASES: dict[str, list[str]] = {
     "road_description": ["บริเวณที่เกิดเหตุ/ลักษณะทาง", "บริเวณที่เกิดเหตุ", "road_description"],
     "latitude": ["latitude", "lat", "ละติจูด"],
     "longitude": ["longitude", "lon", "long", "ลองจิจูด"],
-    "vehicles_involved": ["จำนวนรถที่เกิดเหตุ", "number_of_vehicles_involved"],
+    "vehicles_involved": ["จำนวนรถที่เกิดเหตุ(รวมคันที่1)", "จำนวนรถที่เกิดเหตุ", "รถที่เกิดเหตุ", "number_of_vehicles_involved"],
     "fatalities": ["จำนวนผู้เสียชีวิต", "number_of_fatalities", "ผู้เสียชีวิต", "เสียชีวิต"],
     "injuries": ["รวมจำนวนผู้บาดเจ็บ", "number_of_injuries", "จำนวนผู้บาดเจ็บ", "ผู้บาดเจ็บ"],
-    "injuries_serious": ["จำนวนผู้บาดเจ็บสาหัส", "บาดเจ็บสาหัส"],
-    "injuries_minor": ["จำนวนผู้บาดเจ็บเล็กน้อย", "บาดเจ็บเล็กน้อย"],
+    "injuries_serious": ["จำนวนผู้บาดเจ็บสาหัส", "ผู้บาดเจ็บสาหัส", "บาดเจ็บสาหัส"],
+    "injuries_minor": ["จำนวนผู้บาดเจ็บเล็กน้อย", "ผู้บาดเจ็บเล็กน้อย", "บาดเจ็บเล็กน้อย"],
 }
 
 # Province names are in Thai in this table; keep the English form if a file only has that.
@@ -146,11 +148,24 @@ def _to_ascii(series: pd.Series) -> pd.Series:
     return series.astype("string").str.translate(THAI_DIGITS).str.strip()
 
 
-def parse_date(series: pd.Series) -> pd.Series:
+def slash_date_order(series: pd.Series) -> str:
+    """Guess whether a file writes slash dates as day/month ("dmy") or month/day ("mdy").
+
+    Some years of the accident data use the US order (7/15/2020) and others the
+    Thai order (15/7/2020). A first part above 12 can only be a day, a second
+    part above 12 can only be a day; whichever happens more often wins.
+    Ambiguous files fall back to the Thai day-first order.
+    """
+    parts = _to_ascii(series).str.extract(r"^(\d{1,2})[/-](\d{1,2})[/-]\d{4}").apply(pd.to_numeric)
+    return "mdy" if (parts[1] > 12).sum() > (parts[0] > 12).sum() else "dmy"
+
+
+def parse_date(series: pd.Series, order: str | None = None) -> pd.Series:
     """Parse the date formats found in Thai government files into datetimes.
 
-    Handles ISO dates, d/m/Y with Buddhist-Era or Gregorian years, Thai month
-    names ("5 ม.ค. 2566"), Thai digits and Excel serial numbers.
+    Handles ISO dates, slash dates in either day/month or month/day order (see
+    slash_date_order) with Buddhist-Era or Gregorian years, Thai month names
+    ("5 ม.ค. 2566"), Thai digits and Excel serial numbers.
     """
     s = _to_ascii(series)
     out = pd.Series(pd.NaT, index=series.index, dtype="datetime64[ns]")
@@ -168,28 +183,39 @@ def parse_date(series: pd.Series) -> pd.Series:
 
     rest = ~serial & s.notna()
     iso = rest & s.str.match(r"^\d{4}-\d{1,2}-\d{1,2}").fillna(False)
-    dmy = rest & ~iso & s.str.match(r"^\d{1,2}[/-]\d{1,2}[/-]\d{4}").fillna(False)
-    other = rest & ~iso & ~dmy
+    slash = rest & ~iso & s.str.match(r"^\d{1,2}[/-]\d{1,2}[/-]\d{4}").fillna(False)
+    other = rest & ~iso & ~slash
 
     out[iso] = pd.to_datetime(s[iso], errors="coerce", format="ISO8601")
-    day_part = s[dmy].str.extract(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})")
-    out[dmy] = pd.to_datetime(
-        day_part[0] + "/" + day_part[1] + "/" + day_part[2], errors="coerce", format="%d/%m/%Y"
-    )
+    if slash.any():
+        order = order or slash_date_order(s[slash])
+        p = s[slash].str.extract(r"^(\d{1,2})[/-](\d{1,2})[/-](\d{4})").apply(pd.to_numeric)
+        day, month = (p[0], p[1]) if order == "dmy" else (p[1], p[0])
+        # A part above 12 can only be the day, whatever the file's usual order.
+        swap = month > 12
+        day, month = day.where(~swap, month), month.where(~swap, day)
+        out[slash] = pd.to_datetime(pd.DataFrame({"year": p[2], "month": month, "day": day}), errors="coerce")
     if other.any():
         out[other] = pd.to_datetime(s[other], errors="coerce", format="mixed", dayfirst=True)
     return out
 
 
 def parse_time(series: pd.Series) -> pd.Series:
-    """Parse "14:30", "14.30 น.", "1430", "14:30:00" into a Timedelta since midnight."""
+    """Parse "14:30", "14.30 น.", "1430", "14:30:00" or an Excel day fraction (0.5 = 12:00)
+    into a Timedelta since midnight."""
     s = _to_ascii(series).str.replace(r"\s*(น\.|น|hrs?\.?)$", "", regex=True)
+    # Files exported from Excel store every time as a day fraction, including "0.25" and "0";
+    # elsewhere only unambiguous long fractions are read that way ("0.30" stays 00:30).
+    frac_like = s.str.fullmatch(r"0|1|0?\.\d+").fillna(False)
+    mostly_fractions = frac_like.sum() > 0.5 * s.notna().sum()
+    fraction = frac_like if mostly_fractions else s.str.fullmatch(r"0?\.\d{3,}").fillna(False)
     parts = s.str.extract(r"^(\d{1,2})[:.]?(\d{2})?(?::(\d{2}))?$")
     hour = pd.to_numeric(parts[0], errors="coerce")
     minute = pd.to_numeric(parts[1], errors="coerce").fillna(0)
-    valid = hour.between(0, 23) & minute.between(0, 59)
-    td = pd.to_timedelta(hour * 60 + minute, unit="min")
-    return td.where(valid)
+    minutes = (hour * 60 + minute).where(hour.between(0, 23) & minute.between(0, 59))
+    frac_minutes = (pd.to_numeric(s.where(fraction), errors="coerce") * 1440).round()
+    minutes = minutes.where(~fraction, frac_minutes.where(frac_minutes < 1440))
+    return pd.to_timedelta(minutes, unit="min")
 
 
 def _categorize(series: pd.Series, rules: list[tuple[str, list[str]]], unknown: str = "Unknown") -> pd.Series:
@@ -225,6 +251,9 @@ def clean(raw: pd.DataFrame, log: CleaningLog | None = None) -> pd.DataFrame:
     # Strip whitespace everywhere and turn empty-ish markers into NaN.
     for col in df.columns:
         df[col] = df[col].astype("string").str.strip().replace({"": pd.NA, "-": pd.NA, "nan": pd.NA})
+    empty = df.isna().all(axis=1)
+    log.add("completely empty rows dropped", empty.sum())
+    df = df[~empty].reset_index(drop=True)
 
     # --- date & time
     if "incident_datetime" in df.columns:
@@ -232,11 +261,39 @@ def clean(raw: pd.DataFrame, log: CleaningLog | None = None) -> pd.DataFrame:
         time_part = df["incident_datetime"].str.extract(r"(\d{1,2}[:.]\d{2}(?::\d{2})?)")[0]
         td = parse_time(time_part)
     else:
-        dt = parse_date(df["incident_date"])
-        td = parse_time(df["incident_time"]) if "incident_time" in df.columns else pd.Series(pd.NaT, index=df.index)
+        order = slash_date_order(df["incident_date"])
+        n_slash = df["incident_date"].str.contains("/", regex=False).sum()
+        if n_slash:
+            log.add(f"slash dates read as {'month/day/year' if order == 'mdy' else 'day/month/year'}", n_slash,
+                    "order detected from values whose day part is above 12")
+        n_serial = df["incident_date"].str.fullmatch(r"\d{5}").sum()
+        if n_serial:
+            log.add("Excel serial-number dates converted", n_serial)
+        dt = parse_date(df["incident_date"], order)
+        if "report_date" in df.columns and n_slash:
+            # Some rows have day and month swapped in the incident date only. A report
+            # can't be filed before the accident, so when the file's order gives a report
+            # date earlier than the incident and the other order does not, swap it.
+            other = "dmy" if order == "mdy" else "mdy"
+            reported = parse_date(df["report_date"], order)
+            alt = parse_date(df["incident_date"], other)
+            flip = ((reported - dt).dt.days < 0) & ((reported - alt).dt.days >= 0)
+            log.add("incident date before report date fixed by swapping day/month", flip.sum(),
+                    "only the incident-date column was swapped; the report date is consistent")
+            dt = dt.where(~flip, alt)
+        times = df["incident_time"] if "incident_time" in df.columns else pd.Series(pd.NA, index=df.index, dtype="string")
+        td = parse_time(times)
+        n_frac = times.str.fullmatch(r"0|1|0?\.\d+").sum()
+        if n_frac > 0.5 * times.notna().sum():
+            log.add("Excel day-fraction times converted", n_frac, "e.g. 0.3403 -> 08:10")
     bad_date = dt.isna() & df.get("incident_datetime", df.get("incident_date")).notna()
     log.add("unparseable dates -> dropped", bad_date.sum())
     log.add("missing or invalid time -> hour left blank", td.isna().sum())
+    if "year_recorded" in df.columns:
+        recorded = pd.to_numeric(_to_ascii(df["year_recorded"]), errors="coerce")
+        recorded = recorded.where(recorded < 2400, recorded - 543)
+        mismatch = dt.notna() & recorded.notna() & (dt.dt.year != recorded)
+        log.add("date's year differs from the 'year' column (kept, date wins)", mismatch.sum())
     df["date"] = dt.dt.normalize()
     df["datetime"] = df["date"] + td
     df["hour"] = (td.dt.total_seconds() // 3600).astype("Int64")
@@ -289,11 +346,43 @@ def clean(raw: pd.DataFrame, log: CleaningLog | None = None) -> pd.DataFrame:
     # --- drop unusable rows, then duplicates
     df = df[df["date"].notna()]
     before = len(df)
-    key = ["acc_code"] if "acc_code" in df.columns and df["acc_code"].notna().mean() > 0.9 else None
-    df = df.drop_duplicates(subset=key)
-    log.add("duplicate rows removed", before - len(df), f"key: {key or 'all columns'}")
+    df = drop_duplicate_accidents(df, log)
+    key = "ACC_CODE where present, otherwise all columns" if "acc_code" in df.columns else "all columns"
+    log.add("duplicate rows removed", before - len(df), f"key: {key}")
     log.add("rows kept", len(df))
     return df.reset_index(drop=True)
+
+
+def drop_duplicate_accidents(df: pd.DataFrame, log: CleaningLog | None = None) -> pd.DataFrame:
+    """Drop repeats by ACC_CODE where a row has one, by identical content where it does not.
+
+    Some files list the same ACC_CODE twice with day and month swapped
+    (1/2/2023 vs 2/1/2023). Codes are issued roughly in time order, so the copy
+    whose date is closest to the dates of its neighbouring codes is kept.
+    """
+    if "acc_code" not in df.columns:
+        return df.drop_duplicates()
+    has_code = df["acc_code"].notna()
+    coded = df[has_code]
+    dup = coded["acc_code"].duplicated(keep=False)
+    conflict = dup & coded.groupby("acc_code")["date"].transform("nunique").gt(1)
+    if conflict.any():
+        num = pd.to_numeric(coded["acc_code"], errors="coerce")
+        ref = coded[~dup & num.notna()].assign(_n=num).sort_values("_n")
+        codes = ref["_n"].to_numpy()
+        days = ref["date"].to_numpy().astype("datetime64[D]").astype("int64")
+        idx = np.searchsorted(codes, num[conflict].to_numpy())
+        neighbour = [np.median(days[max(0, i - 20): i + 20]) if len(days) else np.nan for i in idx]
+        gap = (coded.loc[conflict, "date"].to_numpy().astype("datetime64[D]").astype("int64") - neighbour)
+        rank = pd.Series(np.abs(gap), index=coded.index[conflict])
+        keep = rank.groupby(coded.loc[conflict, "acc_code"]).idxmin()
+        coded = coded[~conflict | coded.index.isin(keep)]
+        if log is not None:
+            log.add("same ACC_CODE with swapped day/month -> kept the copy matching neighbouring codes",
+                    conflict.sum() - len(keep))
+    with_code = coded.drop_duplicates(subset="acc_code")
+    without = df[~has_code].drop_duplicates()
+    return pd.concat([with_code, without]).sort_index()
 
 
 def clean_files(paths: list[Path]) -> tuple[pd.DataFrame, pd.DataFrame]:
@@ -305,8 +394,7 @@ def clean_files(paths: list[Path]) -> tuple[pd.DataFrame, pd.DataFrame]:
         logs.append(log.to_frame().assign(file=Path(path).name))
     data = pd.concat(frames, ignore_index=True)
     before = len(data)
-    if "acc_code" in data.columns and data["acc_code"].notna().mean() > 0.9:
-        data = data.drop_duplicates(subset="acc_code").reset_index(drop=True)
+    data = drop_duplicate_accidents(data).reset_index(drop=True)
     cross = pd.DataFrame(
         [{"step": "duplicates across files removed", "rows_affected": before - len(data), "note": "", "file": "(all)"}]
     )

@@ -28,43 +28,58 @@ def test_festival_windows(date, period, year, day):
 
 
 def _tiny() -> pd.DataFrame:
-    # Two accidents on each of the 14 festival days of 2023, one on each normal day.
-    days = pd.date_range("2022-12-29", "2023-04-17", freq="D")
+    # Four accidents on each of the 14 festival days of 2023, one on each normal day.
+    days = pd.date_range("2022-12-01", "2023-04-30", freq="D")
     fest = festival_of(pd.Series(days))["period"] != "Normal days"
-    dates = np.repeat(days, np.where(fest, 2, 1))
+    dates = np.repeat(days, np.where(fest, 4, 1))
     n = len(dates)
     return add_features(pd.DataFrame({
         "date": dates, "hour": pd.array([20] * n, dtype="Int64"), "fatalities": 1, "injuries": 0,
         "province_th": "ขอนแก่น", "province_en": "Khon Kaen", "region": "Northeast",
         "cause_group": "Speeding", "vehicle_group": "Motorcycle", "latitude": np.nan, "longitude": np.nan,
+        "agency": "กรมทางหลวง",
     }))
+
+
+def test_campaign_days_are_detected():
+    windows = analysis.campaign_windows(_tiny()).set_index("period")
+    assert windows.loc["New Year", "start"] == pd.Timestamp("2022-12-29")
+    assert windows.loc["Songkran", "end"] == pd.Timestamp("2023-04-17")
+    assert windows["days"].tolist() == [7, 7]
 
 
 def test_period_rates_use_calendar_days():
     rates = analysis.period_rates(_tiny())
     assert rates.loc["Songkran", "days"] == 7
-    assert rates.loc["New Year", "accidents_per_day"] == 2
+    assert rates.loc["New Year", "accidents_per_day"] == 4
     assert rates.loc["Normal days", "accidents_per_day"] == 1
-    assert rates.loc["Songkran", "accident_lift"] == 2
+    assert rates.loc["Songkran", "accidents_vs_normal"] == 4
 
 
 def test_festival_day_profile_only_complete_windows():
     df = _tiny()
-    partial = df[df["date"] >= "2022-12-31"]  # New Year window cut short
-    prof = analysis.festival_day_profile(partial)
+    partial = add_features(df[df["date"] >= "2022-12-31"].drop(columns=["period", "festival_year", "festival_day"]))
+    prof = analysis.festival_day_profile(partial)  # New Year window cut by the start of the data
     assert set(prof["period"]) == {"Songkran"}
+    assert prof["md"].tolist() == [f"04-{d}" for d in range(11, 18)]
 
 
-def test_province_lift():
+def test_province_severity():
     prov = analysis.province_table(_tiny(), min_festival_accidents=1)
-    assert prov.loc["ขอนแก่น", "lift"] == pytest.approx(2.0)
+    assert prov.loc["ขอนแก่น", "festival_deaths_per_100_accidents"] == pytest.approx(100.0)
+    assert prov.loc["ขอนแก่น", "share_of_festival_deaths"] == pytest.approx(1.0)
 
 
 def test_end_to_end_report(tmp_path):
     """Smoke test on random synthetic rows: the pipeline runs and writes every figure."""
     rng = np.random.default_rng(0)
-    n = 3000
+    n = 6000
     dates = pd.to_datetime("2022-01-01") + pd.to_timedelta(rng.integers(0, 730, n), unit="D")
+    # Mimic the recording step: campaign days get four times as many records.
+    fest = pd.Series(festival_of(pd.Series(dates))["period"] != "Normal days").to_numpy()
+    keep = fest | (rng.random(n) < 0.25)
+    dates = dates[keep]
+    n = len(dates)
     prov = PROVINCE_TABLE.sample(n, replace=True, random_state=0)
     raw = pd.DataFrame({
         "ACC_CODE": [f"X{i}" for i in range(n)],

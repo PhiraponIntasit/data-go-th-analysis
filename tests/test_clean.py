@@ -114,3 +114,40 @@ def test_clean_english_file():
 def test_missing_columns_has_helpful_error():
     with pytest.raises(ValueError, match="Headers present"):
         clean(pd.DataFrame({"foo": ["1"]}))
+
+
+def test_month_first_files_are_detected():
+    us = pd.Series(["7/15/2020", "1/2/2020", "12/31/2020"])
+    assert parse_date(us).dt.strftime("%Y-%m-%d").tolist() == ["2020-07-15", "2020-01-02", "2020-12-31"]
+    th = pd.Series(["15/7/2020", "1/2/2020"])
+    assert parse_date(th).dt.strftime("%Y-%m-%d").tolist() == ["2020-07-15", "2020-02-01"]
+
+
+def test_excel_day_fraction_times():
+    mostly_fractions = pd.Series(["0.340277778", "0.25", "0", "0.5"], dtype="string")
+    assert [t.total_seconds() / 60 for t in parse_time(mostly_fractions)] == [490, 360, 0, 720]
+    normal = pd.Series(["0.30", "14:00", "9:15"], dtype="string")
+    assert [t.total_seconds() / 60 for t in parse_time(normal)] == [30, 840, 555]
+
+
+def test_swapped_duplicate_keeps_copy_matching_neighbours():
+    codes = [str(c) for c in range(100, 140)]
+    dates = [f"1/{d}/2023" for d in range(1, 21)] + [f"2/{d}/2023" for d in range(1, 21)]  # month/day
+    raw = pd.DataFrame({"ACC_CODE": codes, "วันที่เกิดเหตุ": dates, "จังหวัด": "ขอนแก่น"})
+    # code 110 sits among early-January codes; its second copy has day and month swapped.
+    raw = pd.concat([raw, pd.DataFrame({"ACC_CODE": ["110"], "วันที่เกิดเหตุ": ["11/1/2023"], "จังหวัด": ["ขอนแก่น"]})])
+    log = CleaningLog()
+    df = clean(raw, log).set_index("acc_code")
+    assert df.loc["110", "date"] == pd.Timestamp("2023-01-11")
+    assert len(df) == 40
+
+
+def test_incident_date_swapped_against_report_date():
+    raw = pd.DataFrame({
+        "วันที่เกิดเหตุ": ["1/15/2022", "02/01/2022", "02/01/2022"],  # file is month/day
+        "วันที่รายงาน": ["1/16/2022", "01/03/2022", "02/03/2022"],
+        "จังหวัด": "ขอนแก่น",
+    })
+    df = clean(raw)
+    # Row 2: read as Feb 1 it would be reported on Jan 3, before it happened -> really Jan 2.
+    assert df["date"].dt.strftime("%Y-%m-%d").tolist() == ["2022-01-15", "2022-01-02", "2022-02-01"]

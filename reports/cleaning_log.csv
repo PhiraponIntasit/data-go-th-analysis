@@ -1,0 +1,115 @@
+﻿step,rows_affected,note,file
+rows read,40246,,accident2019.csv
+completely empty rows dropped,21052,,accident2019.csv
+slash dates read as day/month/year,19194,order detected from values whose day part is above 12,accident2019.csv
+incident date before report date fixed by swapping day/month,0,only the incident-date column was swapped; the report date is consistent,accident2019.csv
+unparseable dates -> dropped,0,,accident2019.csv
+missing or invalid time -> hour left blank,0,,accident2019.csv
+"date's year differs from the 'year' column (kept, date wins)",0,,accident2019.csv
+province names rewritten to canonical form,377,"prefixes like 'จ.', English names, nicknames such as กทม/โคราช",accident2019.csv
+fatalities: blank -> 0,0,a blank casualty cell means none were recorded,accident2019.csv
+injuries: blank -> 0,0,a blank casualty cell means none were recorded,accident2019.csv
+latitude/longitude swapped back,0,,accident2019.csv
+coordinates outside Thailand -> blank,2,,accident2019.csv
+duplicate rows removed,0,key: all columns,accident2019.csv
+rows kept,19194,,accident2019.csv
+rows read,21239,,accident2020.csv
+completely empty rows dropped,0,,accident2020.csv
+slash dates read as month/day/year,21238,order detected from values whose day part is above 12,accident2020.csv
+Excel serial-number dates converted,1,,accident2020.csv
+incident date before report date fixed by swapping day/month,0,only the incident-date column was swapped; the report date is consistent,accident2020.csv
+unparseable dates -> dropped,0,,accident2020.csv
+missing or invalid time -> hour left blank,0,,accident2020.csv
+"date's year differs from the 'year' column (kept, date wins)",0,,accident2020.csv
+province names rewritten to canonical form,386,"prefixes like 'จ.', English names, nicknames such as กทม/โคราช",accident2020.csv
+fatalities: blank -> 0,0,a blank casualty cell means none were recorded,accident2020.csv
+injuries: blank -> 0,0,a blank casualty cell means none were recorded,accident2020.csv
+latitude/longitude swapped back,1,,accident2020.csv
+coordinates outside Thailand -> blank,1,,accident2020.csv
+duplicate rows removed,0,"key: ACC_CODE where present, otherwise all columns",accident2020.csv
+rows kept,21239,,accident2020.csv
+rows read,20062,,accident2021.csv
+completely empty rows dropped,0,,accident2021.csv
+slash dates read as month/day/year,20062,order detected from values whose day part is above 12,accident2021.csv
+incident date before report date fixed by swapping day/month,0,only the incident-date column was swapped; the report date is consistent,accident2021.csv
+unparseable dates -> dropped,0,,accident2021.csv
+missing or invalid time -> hour left blank,0,,accident2021.csv
+"date's year differs from the 'year' column (kept, date wins)",0,,accident2021.csv
+province names rewritten to canonical form,435,"prefixes like 'จ.', English names, nicknames such as กทม/โคราช",accident2021.csv
+fatalities: blank -> 0,0,a blank casualty cell means none were recorded,accident2021.csv
+injuries: blank -> 0,0,a blank casualty cell means none were recorded,accident2021.csv
+latitude/longitude swapped back,0,,accident2021.csv
+coordinates outside Thailand -> blank,0,,accident2021.csv
+duplicate rows removed,0,"key: ACC_CODE where present, otherwise all columns",accident2021.csv
+rows kept,20062,,accident2021.csv
+rows read,20566,,accident2022.csv
+completely empty rows dropped,0,,accident2022.csv
+slash dates read as month/day/year,20566,order detected from values whose day part is above 12,accident2022.csv
+incident date before report date fixed by swapping day/month,2469,only the incident-date column was swapped; the report date is consistent,accident2022.csv
+unparseable dates -> dropped,0,,accident2022.csv
+missing or invalid time -> hour left blank,0,,accident2022.csv
+"date's year differs from the 'year' column (kept, date wins)",0,,accident2022.csv
+province names rewritten to canonical form,373,"prefixes like 'จ.', English names, nicknames such as กทม/โคราช",accident2022.csv
+fatalities: blank -> 0,0,a blank casualty cell means none were recorded,accident2022.csv
+injuries: blank -> 0,0,a blank casualty cell means none were recorded,accident2022.csv
+latitude/longitude swapped back,0,,accident2022.csv
+coordinates outside Thailand -> blank,0,,accident2022.csv
+duplicate rows removed,0,"key: ACC_CODE where present, otherwise all columns",accident2022.csv
+rows kept,20566,,accident2022.csv
+rows read,23841,,accident2023.csv
+completely empty rows dropped,0,,accident2023.csv
+slash dates read as month/day/year,23841,order detected from values whose day part is above 12,accident2023.csv
+incident date before report date fixed by swapping day/month,127,only the incident-date column was swapped; the report date is consistent,accident2023.csv
+unparseable dates -> dropped,0,,accident2023.csv
+missing or invalid time -> hour left blank,0,,accident2023.csv
+"date's year differs from the 'year' column (kept, date wins)",0,,accident2023.csv
+province names rewritten to canonical form,434,"prefixes like 'จ.', English names, nicknames such as กทม/โคราช",accident2023.csv
+fatalities: blank -> 0,0,a blank casualty cell means none were recorded,accident2023.csv
+injuries: blank -> 0,0,a blank casualty cell means none were recorded,accident2023.csv
+latitude/longitude swapped back,0,,accident2023.csv
+coordinates outside Thailand -> blank,4,,accident2023.csv
+same ACC_CODE with swapped day/month -> kept the copy matching neighbouring codes,344,,accident2023.csv
+duplicate rows removed,1702,"key: ACC_CODE where present, otherwise all columns",accident2023.csv
+rows kept,22139,,accident2023.csv
+rows read,23952,,accident2024.csv
+completely empty rows dropped,0,,accident2024.csv
+Excel serial-number dates converted,23952,,accident2024.csv
+Excel day-fraction times converted,23952,e.g. 0.3403 -> 08:10,accident2024.csv
+unparseable dates -> dropped,0,,accident2024.csv
+missing or invalid time -> hour left blank,0,,accident2024.csv
+"date's year differs from the 'year' column (kept, date wins)",0,,accident2024.csv
+province names rewritten to canonical form,418,"prefixes like 'จ.', English names, nicknames such as กทม/โคราช",accident2024.csv
+fatalities: blank -> 0,0,a blank casualty cell means none were recorded,accident2024.csv
+injuries: blank -> 0,0,a blank casualty cell means none were recorded,accident2024.csv
+latitude/longitude swapped back,0,,accident2024.csv
+coordinates outside Thailand -> blank,0,,accident2024.csv
+duplicate rows removed,0,"key: ACC_CODE where present, otherwise all columns",accident2024.csv
+rows kept,23952,,accident2024.csv
+rows read,23715,,accident2025.csv
+completely empty rows dropped,0,,accident2025.csv
+Excel serial-number dates converted,23715,,accident2025.csv
+unparseable dates -> dropped,0,,accident2025.csv
+missing or invalid time -> hour left blank,0,,accident2025.csv
+"date's year differs from the 'year' column (kept, date wins)",0,,accident2025.csv
+province names rewritten to canonical form,418,"prefixes like 'จ.', English names, nicknames such as กทม/โคราช",accident2025.csv
+fatalities: blank -> 0,0,a blank casualty cell means none were recorded,accident2025.csv
+injuries: blank -> 0,0,a blank casualty cell means none were recorded,accident2025.csv
+latitude/longitude swapped back,1,,accident2025.csv
+coordinates outside Thailand -> blank,1,,accident2025.csv
+duplicate rows removed,0,"key: ACC_CODE where present, otherwise all columns",accident2025.csv
+rows kept,23715,,accident2025.csv
+rows read,21433,,accident2026.csv
+completely empty rows dropped,3979,,accident2026.csv
+slash dates read as day/month/year,17454,order detected from values whose day part is above 12,accident2026.csv
+incident date before report date fixed by swapping day/month,0,only the incident-date column was swapped; the report date is consistent,accident2026.csv
+unparseable dates -> dropped,0,,accident2026.csv
+missing or invalid time -> hour left blank,0,,accident2026.csv
+"date's year differs from the 'year' column (kept, date wins)",0,,accident2026.csv
+province names rewritten to canonical form,0,"prefixes like 'จ.', English names, nicknames such as กทม/โคราช",accident2026.csv
+fatalities: blank -> 0,0,a blank casualty cell means none were recorded,accident2026.csv
+injuries: blank -> 0,0,a blank casualty cell means none were recorded,accident2026.csv
+latitude/longitude swapped back,0,,accident2026.csv
+coordinates outside Thailand -> blank,0,,accident2026.csv
+duplicate rows removed,21,key: all columns,accident2026.csv
+rows kept,17433,,accident2026.csv
+duplicates across files removed,0,,(all)
